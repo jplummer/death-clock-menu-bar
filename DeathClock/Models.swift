@@ -17,6 +17,17 @@ struct UserProfile: Codable {
     }
 }
 
+extension UserProfile {
+    /// Default profile for display when user hasn't completed setup
+    static var `default`: UserProfile {
+        UserProfile(
+            dateOfBirth: Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date(),
+            sex: .male,
+            location: Location(country: "United States", region: nil)
+        )
+    }
+}
+
 struct LifeExpectancyData: Codable {
     let baseLifeExpectancy: Double // In years
     let country: String

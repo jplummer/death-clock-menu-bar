@@ -93,3 +93,10 @@ iOSInjectionProject/
 # macOS
 .DS_Store
 
+# Build artifacts
+build/
+build.log
+*.xcuserstate
+*.xcuserdatad
+DerivedData/
+

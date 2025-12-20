@@ -5,7 +5,6 @@ class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
     
     private let userDefaults = UserDefaults.standard
-    private let settingsKey = "com.deathclock.settings"
     
     @Published var settings: AppSettings {
         didSet {
@@ -18,7 +17,7 @@ class SettingsManager: ObservableObject {
     }
     
     private static func loadSettings() -> AppSettings {
-        guard let data = UserDefaults.standard.data(forKey: "com.deathclock.settings"),
+        guard let data = UserDefaults.standard.data(forKey: Constants.settingsKey),
               let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
             return AppSettings()
         }
@@ -27,16 +26,12 @@ class SettingsManager: ObservableObject {
     
     private func saveSettings() {
         if let encoded = try? JSONEncoder().encode(settings) {
-            userDefaults.set(encoded, forKey: settingsKey)
+            userDefaults.set(encoded, forKey: Constants.settingsKey)
         }
     }
     
     var hasCompletedSetup: Bool {
         settings.userProfile != nil
-    }
-    
-    func updateUserProfile(_ profile: UserProfile) {
-        settings.userProfile = profile
     }
 }
 

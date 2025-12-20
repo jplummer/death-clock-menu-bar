@@ -14,6 +14,8 @@ A macOS menu bar widget that displays the number of days remaining until the use
 - [x] Menu with settings and quit options
 - [x] Multiple display formats (Years/Days, Days Only, Percentage, Progress Bar)
 - [x] Auto-save settings
+- [x] Track on GitHub
+- [x] Code review and cleanup/comment pass
 
 ### Phase 2: Enhanced Calculation (Next)
 - [ ] Integrate real-time life expectancy API or official data sources
@@ -28,9 +30,13 @@ A macOS menu bar widget that displays the number of days remaining until the use
 - [ ] Store and update lifestyle data
 - [ ] Recalculate based on lifestyle changes
 
-### Phase 4: Polish & Distribution (Future)
-- [ ] App icon design
+### Phase 4: Polish
 - [ ] Animations and visual polish
+- [ ] Memento mori/vivere modes
+- [ ] "Bonus" for living beyond expectancy
+
+### Phase 5: Distribution (Future)
+- [ ] App icon design
 - [ ] Error handling and edge cases
 - [ ] App Store preparation
 - [ ] Notarization for distribution

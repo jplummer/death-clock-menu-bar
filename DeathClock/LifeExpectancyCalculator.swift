@@ -2,10 +2,10 @@ import Foundation
 
 /// Calculates life expectancy and days remaining based on user demographics.
 ///
-/// **Current Data Source:**
-/// - Uses hardcoded approximate values (placeholder data)
-/// - Values are rough estimates based on WHO Global Health Observatory data
-/// - Not suitable for production use without real data sources
+/// **Data Source:**
+/// - Loads from Resources/life-expectancy-data.json
+/// - Falls back to hardcoded values if JSON loading fails
+/// - Values are approximate estimates based on WHO Global Health Observatory data
 ///
 /// **Recommended Data Sources for Production:**
 /// - WHO Global Health Observatory: https://www.who.int/data/gho
@@ -14,11 +14,12 @@ import Foundation
 /// - UN Population Division: World Population Prospects
 ///
 /// **Future Enhancements:**
-/// - Load from JSON data file (see Resources/life-expectancy-data.json)
 /// - Integrate API for real-time updates
 /// - Use actuarial life tables for age-adjusted calculations
 class LifeExpectancyCalculator {
     static let shared = LifeExpectancyCalculator()
+    
+    private let dataLoader = LifeExpectancyDataLoader.shared
     
     private init() {}
     
@@ -30,100 +31,48 @@ class LifeExpectancyCalculator {
         }
         
         // Convert remaining life expectancy from years to days
-        // Use 365.25 to account for leap years
-        let remainingDays = Int(remainingLifeExpectancyYears * 365.25)
+        let remainingDays = Int(remainingLifeExpectancyYears * Constants.LifeExpectancy.daysPerYear)
         
         return max(0, remainingDays)
     }
     
     /// Calculate total days from birth to life expectancy (for progress bar)
     func calculateTotalDaysFromBirth(profile: UserProfile) -> Int? {
-        // Get base life expectancy at birth (before age adjustment)
-        let baseExpectancy: Double
-        
-        switch profile.sex {
-        case .female:
-            baseExpectancy = getFemaleLifeExpectancy(country: profile.location.country)
-        case .male:
-            baseExpectancy = getMaleLifeExpectancy(country: profile.location.country)
-        case .other:
-            let male = getMaleLifeExpectancy(country: profile.location.country)
-            let female = getFemaleLifeExpectancy(country: profile.location.country)
-            baseExpectancy = (male + female) / 2.0
-        }
-        
-        // Convert to total days from birth
-        return Int(baseExpectancy * 365.25)
+        let baseExpectancy = getBaseLifeExpectancy(profile: profile)
+        return Int(baseExpectancy * Constants.LifeExpectancy.daysPerYear)
     }
     
     /// Get base life expectancy in years based on demographics
     private func getLifeExpectancy(for profile: UserProfile) -> Double? {
-        // Phase 1: Use static data tables
-        // This is a simplified version - in production, you'd load from a comprehensive data file
-        
-        // Basic life expectancy by country and sex (simplified averages)
-        // These are approximate values - should be replaced with actual data tables
-        let baseExpectancy: Double
-        
-        switch profile.sex {
-        case .female:
-            baseExpectancy = getFemaleLifeExpectancy(country: profile.location.country)
-        case .male:
-            baseExpectancy = getMaleLifeExpectancy(country: profile.location.country)
-        case .other:
-            // Use average of male/female for other
-            let male = getMaleLifeExpectancy(country: profile.location.country)
-            let female = getFemaleLifeExpectancy(country: profile.location.country)
-            baseExpectancy = (male + female) / 2.0
-        }
+        let baseExpectancy = getBaseLifeExpectancy(profile: profile)
         
         // Adjust for current age (life expectancy increases as you age)
         let calendar = Calendar.current
         let age = calendar.dateComponents([.year], from: profile.dateOfBirth, to: Date()).year ?? 0
         
-        // Simple adjustment: remaining life expectancy increases slightly with age
-        // This is a simplified model - real actuarial tables are more complex
         return adjustForAge(baseExpectancy, currentAge: age)
     }
     
+    /// Get base life expectancy at birth (before age adjustment)
+    private func getBaseLifeExpectancy(profile: UserProfile) -> Double {
+        switch profile.sex {
+        case .female:
+            return getFemaleLifeExpectancy(country: profile.location.country)
+        case .male:
+            return getMaleLifeExpectancy(country: profile.location.country)
+        case .other:
+            let male = getMaleLifeExpectancy(country: profile.location.country)
+            let female = getFemaleLifeExpectancy(country: profile.location.country)
+            return (male + female) / 2.0
+        }
+    }
+    
     func getMaleLifeExpectancy(country: String) -> Double {
-        // TODO: Replace with data loaded from Resources/life-expectancy-data.json
-        // TODO: Integrate official WHO/CDC/UN data sources
-        // Current values are approximate placeholders
-        let data: [String: Double] = [
-            "United States": 76.1,
-            "United Kingdom": 79.0,
-            "Canada": 80.0,
-            "Australia": 81.0,
-            "Germany": 78.5,
-            "France": 79.5,
-            "Japan": 81.5,
-            "China": 75.0,
-            "India": 69.0,
-            "Brazil": 73.0,
-            "Mexico": 72.0
-        ]
-        return data[country] ?? 72.0 // Default fallback
+        return dataLoader.getMaleLifeExpectancy(country: country)
     }
     
     func getFemaleLifeExpectancy(country: String) -> Double {
-        // TODO: Replace with data loaded from Resources/life-expectancy-data.json
-        // TODO: Integrate official WHO/CDC/UN data sources
-        // Current values are approximate placeholders
-        let data: [String: Double] = [
-            "United States": 81.1,
-            "United Kingdom": 82.9,
-            "Canada": 84.0,
-            "Australia": 85.0,
-            "Germany": 83.0,
-            "France": 85.5,
-            "Japan": 87.5,
-            "China": 78.0,
-            "India": 71.0,
-            "Brazil": 79.0,
-            "Mexico": 78.0
-        ]
-        return data[country] ?? 77.0 // Default fallback
+        return dataLoader.getFemaleLifeExpectancy(country: country)
     }
     
     private func adjustForAge(_ baseExpectancy: Double, currentAge: Int) -> Double {
