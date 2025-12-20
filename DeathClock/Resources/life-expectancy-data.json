@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2024-01-01",
+  "source": "WHO Global Health Observatory (approximate values - replace with official data)",
+  "data": {
+    "male": {
+      "United States": 76.1,
+      "United Kingdom": 79.0,
+      "Canada": 80.0,
+      "Australia": 81.0,
+      "Germany": 78.5,
+      "France": 79.5,
+      "Japan": 81.5,
+      "China": 75.0,
+      "India": 69.0,
+      "Brazil": 73.0,
+      "Mexico": 72.0
+    },
+    "female": {
+      "United States": 81.1,
+      "United Kingdom": 82.9,
+      "Canada": 84.0,
+      "Australia": 85.0,
+      "Germany": 83.0,
+      "France": 85.5,
+      "Japan": 87.5,
+      "China": 78.0,
+      "India": 71.0,
+      "Brazil": 79.0,
+      "Mexico": 78.0
+    }
+  },
+  "notes": [
+    "These are approximate values based on WHO data",
+    "Values represent life expectancy at birth",
+    "For production use, integrate official WHO/CDC/UN data sources",
+    "Consider using actuarial life tables for age-adjusted calculations"
+  ]
+}
+
