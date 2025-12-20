@@ -8,6 +8,7 @@ class MenuBarController: NSObject, ObservableObject, NSPopoverDelegate {
     
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var eventMonitor: Any?
     private let settingsManager = SettingsManager.shared
     private let calculator = LifeExpectancyCalculator.shared
     private let displayFormatter = DisplayFormatter()
@@ -145,6 +146,36 @@ class MenuBarController: NSObject, ObservableObject, NSPopoverDelegate {
         popover?.delegate = self
         
         popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        
+        // Add event monitor to detect clicks outside popover (even when controls have focus)
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self,
+                  let popover = self.popover,
+                  popover.isShown,
+                  let popoverWindow = popover.contentViewController?.view.window else {
+                return event
+            }
+            
+            let clickedWindow = event.window
+            
+            // If click is in a different window, close the popover
+            if clickedWindow != popoverWindow {
+                self.closePopover()
+                return nil // Consume the event
+            }
+            
+            // Click is in the popover window - check if it's outside the content view
+            if let contentView = popover.contentViewController?.view {
+                let locationInWindow = event.locationInWindow
+                let pointInContentView = contentView.convert(locationInWindow, from: nil)
+                if !contentView.bounds.contains(pointInContentView) {
+                    self.closePopover()
+                    return nil // Consume the event
+                }
+            }
+            
+            return event
+        }
     }
     
     func updateDisplay() {
@@ -202,6 +233,11 @@ class MenuBarController: NSObject, ObservableObject, NSPopoverDelegate {
     // MARK: - NSPopoverDelegate
     
     func popoverDidClose(_ notification: Notification) {
+        // Remove event monitor when popover closes
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
         // Clean up when popover closes
         popover = nil
     }
