@@ -1,6 +1,31 @@
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
+    /// Get condensed font for display (same as menu bar)
+    private func getCondensedFont() -> NSFont {
+        let baseFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let fontSize = baseFont.pointSize
+        
+        // Try to get condensed variant using font descriptor
+        let descriptor = baseFont.fontDescriptor
+        let condensedTraits = NSFontDescriptor.SymbolicTraits([.condensed])
+        let condensedDescriptor = descriptor.withSymbolicTraits(condensedTraits)
+        if let condensedFont = NSFont(descriptor: condensedDescriptor, size: fontSize) {
+            return condensedFont
+        }
+        
+        // Try using NSFontManager to get condensed variant
+        let fontManager = NSFontManager.shared
+        let condensedFont = fontManager.convert(baseFont, toHaveTrait: .condensedFontMask)
+        // Check if the conversion actually changed the font
+        if condensedFont.fontName != baseFont.fontName {
+            return condensedFont
+        }
+        
+        // Fall back to regular system font
+        return baseFont
+    }
     @StateObject private var viewModel = SettingsViewModel()
     
     var body: some View {
@@ -70,7 +95,9 @@ struct SettingsView: View {
                             .frame(width: 100, alignment: .leading)
                         Picker("", selection: $viewModel.displayFormat) {
                             ForEach(AppSettings.DisplayFormat.allCases, id: \.self) { format in
-                                Text(viewModel.formatPreview(for: format)).tag(format)
+                                Text(viewModel.formatPreview(for: format))
+                                    .font(Font(getCondensedFont()))
+                                    .tag(format)
                             }
                         }
                         .pickerStyle(.menu)
@@ -87,6 +114,18 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.segmented)
                     }
+                    
+                    // Only show icon option when not in progress bar mode
+                    if viewModel.displayFormat != .progressBar {
+                        HStack {
+                            Text("Icon:")
+                                .frame(width: 100, alignment: .leading)
+                            Toggle("", isOn: $viewModel.showIcon)
+                                .onChange(of: viewModel.showIcon) {
+                                    viewModel.debouncedSave()
+                                }
+                        }
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -97,7 +136,9 @@ struct SettingsView: View {
                     Text("Start at Login:")
                         .frame(width: 100, alignment: .leading)
                     Toggle("", isOn: $viewModel.startAtLogin)
-                        .onChange(of: viewModel.startAtLogin) { viewModel.debouncedSave() }
+                        .onChange(of: viewModel.startAtLogin) {
+                            viewModel.debouncedSave()
+                        }
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -112,21 +153,33 @@ struct SettingsView: View {
             }
         }
         .frame(minWidth: 350, idealWidth: 400, maxWidth: 450)
-        .onChange(of: viewModel.dateOfBirth) { 
+        .onChange(of: viewModel.dateOfBirth) { oldValue, newDate in
+            // Normalize invalid dates to nearest valid year
+            let normalized = viewModel.normalizeDate(newDate)
+            if normalized != newDate {
+                viewModel.dateOfBirth = normalized
+            }
             viewModel.updatePreview()
             viewModel.debouncedSave() 
         }
-        .onChange(of: viewModel.selectedSex) { 
+        .onChange(of: viewModel.selectedSex) {
             viewModel.updatePreview()
             viewModel.debouncedSave() 
         }
-        .onChange(of: viewModel.selectedCountry) { 
+        .onChange(of: viewModel.selectedCountry) {
             viewModel.updatePreview()
             viewModel.debouncedSave() 
         }
-        .onChange(of: viewModel.region) { viewModel.debouncedSave() }
-        .onChange(of: viewModel.displayFormat) { viewModel.debouncedSave() }
-        .onChange(of: viewModel.mementoMode) { viewModel.debouncedSave() }
+        .onChange(of: viewModel.region) {
+            viewModel.debouncedSave()
+        }
+        .onChange(of: viewModel.displayFormat) {
+            viewModel.debouncedSave()
+        }
+        .onChange(of: viewModel.mementoMode) {
+            viewModel.updatePreview()
+            viewModel.debouncedSave()
+        }
     }
 }
 

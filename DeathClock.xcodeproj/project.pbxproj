@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		A6A237882EFCD72400F58569 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A65417D32EF6407E001A01CE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A65417DA2EF6407E001A01CE;
+			remoteInfo = DeathClock;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		A65417DB2EF6407E001A01CE /* DeathClock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeathClock.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6A237842EFCD72400F58569 /* DeathClockTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeathClockTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = DeathClock;
 			sourceTree = "<group>";
 		};
+		A6A237852EFCD72400F58569 /* DeathClockTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DeathClockTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A65417D82EF6407E001A01CE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6A237812EFCD72400F58569 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				A65417DD2EF6407E001A01CE /* DeathClock */,
+				A6A237852EFCD72400F58569 /* DeathClockTests */,
 				A65417DC2EF6407E001A01CE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				A65417DB2EF6407E001A01CE /* DeathClock.app */,
+				A6A237842EFCD72400F58569 /* DeathClockTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = A65417DB2EF6407E001A01CE /* DeathClock.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A6A237832EFCD72400F58569 /* DeathClockTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A6A2378C2EFCD72400F58569 /* Build configuration list for PBXNativeTarget "DeathClockTests" */;
+			buildPhases = (
+				A6A237802EFCD72400F58569 /* Sources */,
+				A6A237812EFCD72400F58569 /* Frameworks */,
+				A6A237822EFCD72400F58569 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A6A237892EFCD72400F58569 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A6A237852EFCD72400F58569 /* DeathClockTests */,
+			);
+			name = DeathClockTests;
+			packageProductDependencies = (
+			);
+			productName = DeathClockTests;
+			productReference = A6A237842EFCD72400F58569 /* DeathClockTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					A65417DA2EF6407E001A01CE = {
 						CreatedOnToolsVersion = 26.1.1;
+					};
+					A6A237832EFCD72400F58569 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = A65417DA2EF6407E001A01CE;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				A65417DA2EF6407E001A01CE /* DeathClock */,
+				A6A237832EFCD72400F58569 /* DeathClockTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A65417D92EF6407E001A01CE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6A237822EFCD72400F58569 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A6A237802EFCD72400F58569 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A6A237892EFCD72400F58569 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A65417DA2EF6407E001A01CE /* DeathClock */;
+			targetProxy = A6A237882EFCD72400F58569 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A65417E42EF64080001A01CE /* Debug */ = {
@@ -305,6 +380,44 @@
 			};
 			name = Release;
 		};
+		A6A2378A2EFCD72400F58569 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jonplummer.DeathClockTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DeathClock.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DeathClock";
+			};
+			name = Debug;
+		};
+		A6A2378B2EFCD72400F58569 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jonplummer.DeathClockTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DeathClock.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DeathClock";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -322,6 +435,15 @@
 			buildConfigurations = (
 				A65417E72EF64080001A01CE /* Debug */,
 				A65417E82EF64080001A01CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A6A2378C2EFCD72400F58569 /* Build configuration list for PBXNativeTarget "DeathClockTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A6A2378A2EFCD72400F58569 /* Debug */,
+				A6A2378B2EFCD72400F58569 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

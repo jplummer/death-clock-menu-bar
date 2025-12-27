@@ -23,5 +23,19 @@ enum Constants {
     enum LifeExpectancy {
         static let daysPerYear: Double = 365.25
     }
+    
+    /// Date validation
+    enum DateValidation {
+        /// Maximum age in years (150 years ago)
+        static let maxAgeYears: Int = 150
+        /// Minimum valid date (maxAgeYears ago)
+        static var minValidDate: Date {
+            Calendar.current.date(byAdding: .year, value: -maxAgeYears, to: Date()) ?? Date()
+        }
+        /// Maximum valid date (today)
+        static var maxValidDate: Date {
+            Date()
+        }
+    }
 }
 

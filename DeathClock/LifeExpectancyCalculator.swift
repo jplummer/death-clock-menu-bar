@@ -36,6 +36,14 @@ class LifeExpectancyCalculator {
         return max(0, remainingDays)
     }
     
+    /// Calculate days lived since birth (for memento vivere mode)
+    func calculateDaysLived(profile: UserProfile) -> Int {
+        let calendar = Calendar.current
+        let now = Date()
+        let daysLived = calendar.dateComponents([.day], from: profile.dateOfBirth, to: now).day ?? 0
+        return max(0, daysLived)
+    }
+    
     /// Calculate total days from birth to life expectancy (for progress bar)
     func calculateTotalDaysFromBirth(profile: UserProfile) -> Int? {
         let baseExpectancy = getBaseLifeExpectancy(profile: profile)
@@ -121,6 +129,32 @@ class LifeExpectancyCalculator {
                 return "\(days)"
             }
             // Show percentage remaining (not elapsed)
+            let percentage = Double(days) / Double(totalDays) * 100.0
+            return String(format: "%.0f%%", percentage)
+        case .progressBar:
+            // Progress bar uses image, not text
+            return ""
+        }
+    }
+    
+    /// Format days lived as a display string (for memento vivere mode)
+    func formatDaysLived(_ days: Int, format: AppSettings.DisplayFormat = .yearsAndDays, totalDays: Int? = nil) -> String {
+        switch format {
+        case .daysOnly:
+            return "\(days)"
+        case .yearsAndDays:
+            if days >= 1000 {
+                let years = days / 365
+                let remainingDays = days % 365
+                return "\(years)y \(remainingDays)d"
+            } else {
+                return "\(days)"
+            }
+        case .percentage:
+            guard let totalDays = totalDays, totalDays > 0 else {
+                return "\(days)"
+            }
+            // Show percentage lived
             let percentage = Double(days) / Double(totalDays) * 100.0
             return String(format: "%.0f%%", percentage)
         case .progressBar:
