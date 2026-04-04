@@ -4,11 +4,10 @@ import AppKit
 class ProgressBarRenderer {
     /// Create a progress bar image for the menu bar
     /// - Parameters:
-    ///   - fillPercentage: Percentage of bar to fill (elapsed time, 0-100)
-    ///   - textPercentage: Percentage to display as text (remaining time, 0-100)
+    ///   - fillPercentage: Portion of the bar filled (days lived / total span, 0-100)
+    ///   - textPercentage: Percentage shown next to the bar (remaining or lived, depending on mode)
     ///   - color: Color to use for the bar and text (defaults to white for menu bar)
-    ///   - swapColors: If true, filled part is 50% opacity and unfilled is solid (for mori mode)
-    static func render(fillPercentage: Double, textPercentage: Double, color: NSColor = NSColor.white, swapColors: Bool = false) -> NSImage {
+    static func render(fillPercentage: Double, textPercentage: Double, color: NSColor = NSColor.white) -> NSImage {
         let width: CGFloat = 60
         let height: CGFloat = 14
         let barHeight: CGFloat = 6
@@ -24,32 +23,14 @@ class ProgressBarRenderer {
         let barRect = NSRect(x: 0, y: (height - barHeight) / 2, width: width - 30, height: barHeight)
         let fillWidth = (width - 30) * CGFloat(fillPercentage / 100.0)
         
-        if swapColors {
-            // For mori: filled part is 50% opacity, unfilled part is solid
-            // Draw filled part at 50% opacity first
-            let fillRect = NSRect(x: 0, y: (height - barHeight) / 2, width: fillWidth, height: barHeight)
-            let filledColor = color.withAlphaComponent(0.5)
-            filledColor.setFill()
-            fillRect.fill()
-            
-            // Then draw unfilled part (the remainder) as solid
-            if fillWidth < (width - 30) {
-                let unfilledRect = NSRect(x: fillWidth, y: (height - barHeight) / 2, width: (width - 30) - fillWidth, height: barHeight)
-                color.setFill()
-                unfilledRect.fill()
-            }
-        } else {
-            // For vivere: filled part is solid, unfilled part is 50% opacity
-            // Draw progress bar background (unfilled part at 50% opacity)
-            let unfilledColor = color.withAlphaComponent(0.5)
-            unfilledColor.setFill()
-            barRect.fill()
-            
-            // Draw progress bar fill (filled part solid, corresponds to the number)
-            let fillRect = NSRect(x: 0, y: (height - barHeight) / 2, width: fillWidth, height: barHeight)
-            color.setFill() // Solid color
-            fillRect.fill()
-        }
+        // Solid fill for lived portion, unfilled track at 50% opacity
+        let unfilledColor = color.withAlphaComponent(0.5)
+        unfilledColor.setFill()
+        barRect.fill()
+        
+        let fillRect = NSRect(x: 0, y: (height - barHeight) / 2, width: fillWidth, height: barHeight)
+        color.setFill()
+        fillRect.fill()
         
         // Get condensed font for text (same as menu bar)
         let baseFont = NSFont.menuBarFont(ofSize: 0)

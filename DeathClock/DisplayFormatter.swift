@@ -70,28 +70,20 @@ class DisplayFormatter {
     
     /// Format as progress bar image
     private func formatProgressBar(profile: UserProfile, daysRemaining: Int, mode: AppSettings.MementoMode, color: NSColor) -> DisplayContent {
-        // Swap colors for mori mode (filled at 50%, unfilled solid)
-        let swapColors = (mode == .mementoMori)
         guard let totalDays = calculator.calculateTotalDaysFromBirth(profile: profile) else {
             return .text("Error")
         }
-        
-        let fillPercentage: Double
+        let daysLived = calculator.calculateDaysLived(profile: profile)
+        // Same bar for both modes (solid fill through life lived, dim remainder); only the label differs
+        let fillPercentage = Double(daysLived) / Double(totalDays) * 100.0
         let textPercentage: Double
-        
         switch mode {
         case .mementoMori:
-            // Show elapsed percentage filled, remaining percentage as text
-            fillPercentage = calculator.calculateElapsedPercentage(daysRemaining: daysRemaining, totalDays: totalDays)
             textPercentage = calculator.calculatePercentage(daysRemaining: daysRemaining, totalDays: totalDays)
         case .mementoVivere:
-            // Show days lived percentage filled, days lived percentage as text
-            let daysLived = calculator.calculateDaysLived(profile: profile)
-            fillPercentage = Double(daysLived) / Double(totalDays) * 100.0
             textPercentage = fillPercentage
         }
-        
-        let image = ProgressBarRenderer.render(fillPercentage: fillPercentage, textPercentage: textPercentage, color: color, swapColors: swapColors)
+        let image = ProgressBarRenderer.render(fillPercentage: fillPercentage, textPercentage: textPercentage, color: color)
         return .image(image)
     }
     
@@ -118,21 +110,22 @@ class DisplayFormatter {
             }
             return format.rawValue
         case .progressBar:
-            // For preview, show a text representation
+            // Text preview matches menu bar: bar fill is always lived %; label is remaining (mori) or lived (vivere)
             if let totalDays = calculator.calculateTotalDaysFromBirth(profile: profile) {
-                let percentage: Double
+                let daysLived = calculator.calculateDaysLived(profile: profile)
+                let barPercentage = Double(daysLived) / Double(totalDays) * 100.0
+                let labelPercentage: Double
                 switch mode {
                 case .mementoMori:
-                    percentage = calculator.calculatePercentage(daysRemaining: daysRemaining, totalDays: totalDays)
+                    labelPercentage = calculator.calculatePercentage(daysRemaining: daysRemaining, totalDays: totalDays)
                 case .mementoVivere:
-                    let daysLived = calculator.calculateDaysLived(profile: profile)
-                    percentage = Double(daysLived) / Double(totalDays) * 100.0
+                    labelPercentage = barPercentage
                 }
-                let filledBlocks = Int((percentage / 100.0) * 8.0)
+                let filledBlocks = Int((barPercentage / 100.0) * 8.0)
                 let emptyBlocks = 8 - filledBlocks
                 let filled = String(repeating: "▓", count: filledBlocks)
                 let empty = String(repeating: "░", count: emptyBlocks)
-                return String(format: "%@%@ %.0f%%", filled, empty, percentage)
+                return String(format: "%@%@ %.0f%%", filled, empty, labelPercentage)
             }
             return format.rawValue
         }

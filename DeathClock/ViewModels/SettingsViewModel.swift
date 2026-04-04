@@ -25,6 +25,11 @@ class SettingsViewModel: ObservableObject {
         LifeExpectancyDataLoader.shared.availableCountries
     }
     
+    /// USPS codes with labels when bundled data includes US state tables (schema v2).
+    var usStatePickerOptions: [(code: String, name: String)] {
+        LifeExpectancyDataLoader.shared.usStatePickerOptions
+    }
+    
     var currentProfile: UserProfile {
         UserProfile(
             dateOfBirth: dateOfBirth,
@@ -129,17 +134,17 @@ class SettingsViewModel: ObservableObject {
     }
     
     private func saveSettings() {
-        // Update settings
+        let loginOk = launchAtLoginManager.setEnabled(startAtLogin)
+        if !loginOk {
+            startAtLogin = launchAtLoginManager.isEnabled
+        }
+        
         settingsManager.settings.userProfile = currentProfile
         settingsManager.settings.displayFormat = displayFormat
         settingsManager.settings.mementoMode = mementoMode
         settingsManager.settings.showIcon = showIcon
         settingsManager.settings.startAtLogin = startAtLogin
         
-        // Update launch at login setting
-        launchAtLoginManager.setEnabled(startAtLogin)
-        
-        // Update menu bar display
         MenuBarController.shared.updateDisplay()
     }
 }

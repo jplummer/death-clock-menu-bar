@@ -81,7 +81,18 @@ struct SettingsView: View {
                     HStack {
                         Text("Region:")
                             .frame(width: 100, alignment: .leading)
-                        TextField("Optional", text: $viewModel.region)
+                        if viewModel.selectedCountry == "United States", !viewModel.usStatePickerOptions.isEmpty {
+                            Picker("", selection: $viewModel.region) {
+                                Text("National average").tag("")
+                                ForEach(viewModel.usStatePickerOptions, id: \.code) { item in
+                                    Text(item.name).tag(item.code)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            TextField("Optional", text: $viewModel.region)
+                        }
                     }
                 }
                 .padding(.horizontal, 12)
@@ -122,7 +133,9 @@ struct SettingsView: View {
                                 .frame(width: 100, alignment: .leading)
                             Toggle("", isOn: $viewModel.showIcon)
                                 .onChange(of: viewModel.showIcon) {
-                                    viewModel.debouncedSave()
+                                    Task { @MainActor in
+                                        viewModel.debouncedSave()
+                                    }
                                 }
                         }
                     }
@@ -137,7 +150,9 @@ struct SettingsView: View {
                         .frame(width: 100, alignment: .leading)
                     Toggle("", isOn: $viewModel.startAtLogin)
                         .onChange(of: viewModel.startAtLogin) {
-                            viewModel.debouncedSave()
+                            Task { @MainActor in
+                                viewModel.debouncedSave()
+                            }
                         }
                 }
                 .padding(.horizontal, 12)
@@ -153,32 +168,46 @@ struct SettingsView: View {
             }
         }
         .frame(minWidth: 350, idealWidth: 400, maxWidth: 450)
-        .onChange(of: viewModel.dateOfBirth) { oldValue, newDate in
-            // Normalize invalid dates to nearest valid year
-            let normalized = viewModel.normalizeDate(newDate)
-            if normalized != newDate {
-                viewModel.dateOfBirth = normalized
+        .onChange(of: viewModel.dateOfBirth) { _, newDate in
+            Task { @MainActor in
+                let normalized = viewModel.normalizeDate(newDate)
+                if normalized != newDate {
+                    viewModel.dateOfBirth = normalized
+                }
+                viewModel.updatePreview()
+                viewModel.debouncedSave()
             }
-            viewModel.updatePreview()
-            viewModel.debouncedSave() 
         }
         .onChange(of: viewModel.selectedSex) {
-            viewModel.updatePreview()
-            viewModel.debouncedSave() 
+            Task { @MainActor in
+                viewModel.updatePreview()
+                viewModel.debouncedSave()
+            }
         }
         .onChange(of: viewModel.selectedCountry) {
-            viewModel.updatePreview()
-            viewModel.debouncedSave() 
+            Task { @MainActor in
+                if viewModel.selectedCountry != "United States" {
+                    viewModel.region = ""
+                }
+                viewModel.updatePreview()
+                viewModel.debouncedSave()
+            }
         }
         .onChange(of: viewModel.region) {
-            viewModel.debouncedSave()
+            Task { @MainActor in
+                viewModel.debouncedSave()
+            }
         }
         .onChange(of: viewModel.displayFormat) {
-            viewModel.debouncedSave()
+            Task { @MainActor in
+                viewModel.debouncedSave()
+            }
         }
         .onChange(of: viewModel.mementoMode) {
-            viewModel.updatePreview()
-            viewModel.debouncedSave()
+            Task { @MainActor in
+                viewModel.updatePreview()
+                viewModel.debouncedSave()
+            }
         }
     }
 }
