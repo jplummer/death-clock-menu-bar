@@ -17,12 +17,18 @@ A macOS menu bar widget that displays the number of days remaining until the use
 - [x] Track on GitHub
 - [x] Code review and cleanup/comment pass
 
-### Phase 2: Enhanced Calculation (Next)
-- [ ] Integrate real-time life expectancy API or official data sources
-- [ ] Add more granular location data (state/province level)
-- [ ] Improve accuracy with multiple data sources
-- [ ] Replace hardcoded data with comprehensive data tables
-- See [DATA_SOURCES.md](DATA_SOURCES.md) for data source possibilties
+### Phase 2: Enhanced Calculation ✅ (Core complete; optional upgrades remain)
+- [x] Official data in the app bundle (no in-app network refresh; regenerate JSON with a script)
+  - [x] **`scripts/build_life_expectancy_bundle.py`** — downloads CDC LEWK4 state workbooks (cached under `scripts/cache/`), fetches World Bank male/female life expectancy at birth by country, writes **`DeathClock/Resources/life-expectancy-data.json`** (schema v2)
+  - [x] **US:** period life tables by state (LEWK4, 1999–2001) + national average across states; **State** picker when country is United States (region row hidden for other countries)
+  - [x] **Non-US:** World Bank e₀ per country; remaining years at age use the US national **eₓ** curve scaled to that country’s e₀ (documented in `scripts/README.md`)
+- [x] **`LifeExpectancyDataLoader` / calculator** — remaining life from table **eₓ** by completed age; legacy v1 JSON still supported
+- [x] **Tests** — `LifeExpectancyDataLoaderTests` + existing date validation tests; shared **`DeathClock.xcscheme`** with `IDEPreferLogStreaming=YES` on Test (reduces logging noise)
+- [ ] **Optional next (data)**
+  - [ ] Newer **US** period tables (e.g. recent NVSR releases) when available in a script-friendly form; replace or supplement LEWK4
+  - [ ] **Subnational** data outside the US (province/region) where licensing and sources allow
+  - [ ] Optional **in-app** refresh / API (only if product goals change; current design is bundle-first)
+- See [DATA_SOURCES.md](DATA_SOURCES.md) and [scripts/README.md](scripts/README.md) for sources and regeneration
 
 ### Phase 3: Polish
 - [x] Memento mori/vivere modes
@@ -49,10 +55,11 @@ A macOS menu bar widget that displays the number of days remaining until the use
   
 - [ ] **Error Handling & Edge Cases**
   - [x] Handle invalid dates (future dates, dates too far in past)
-  -  Handle missing country data gracefully
-  - Handle edge cases in calculations (negative days, very old users)
-  - Add user-friendly error messages
-  - Log errors for debugging (without exposing user data)
+  - [x] Basic loader tests (bundled JSON, US national vs state, international, high age)
+  - [ ] Handle missing country data gracefully (user-visible copy when country not in bundle)
+  - [ ] Handle edge cases in calculations (negative days, very old users) with clear behavior + tests as needed
+  - [ ] Add user-friendly error messages
+  - [ ] Log errors for debugging (without exposing user data)
   
 - [ ] **Privacy & Permissions**
   - Review all data collection (currently: none, all local)
@@ -114,7 +121,7 @@ A macOS menu bar widget that displays the number of days remaining until the use
   
 - [ ] **Distribution Methods**
   - Host on your website
-  - GitHub Releases (free, easy)
+  - GitHub Releases (free)
   - Direct download link
   - No Apple review process
   
@@ -183,7 +190,7 @@ A macOS menu bar widget that displays the number of days remaining until the use
 - Cannot change after first distribution
 
 **Entitlements:**
-- Currently: None required (app is simple)
+- Currently: None required for this minimal app
 - May need: `com.apple.security.app-sandbox` for App Store
 - May need: Network access if adding API features later
 
@@ -196,16 +203,16 @@ A macOS menu bar widget that displays the number of days remaining until the use
 **Distribution Formats:**
 - **.app bundle**: The application itself
 - **.dmg**: Disk image (common for macOS apps)
-- **.zip**: Simple archive (GitHub Releases)
-- **.pkg**: Installer package (less common for simple apps)
+- **.zip**: Archive (e.g. GitHub Releases)
+- **.pkg**: Installer package (less common for small apps)
 
 ## Next Steps
 
-1. ✅ Set up Xcode project structure - **Done**
-2. ✅ Create basic menu bar item - **Done**
-3. ✅ Implement simple countdown display - **Done**
-4. ✅ Add settings persistence - **Done**
-5. ✅ Integrate basic life expectancy calculation - **Done**
-6. **Next**: Integrate official life expectancy data sources (see [DATA_SOURCES.md](DATA_SOURCES.md))
-7. **Future**: Add lifestyle factor adjustments
-8. **Future**: Prepare for App Store distribution
+1. ✅ Set up Xcode project structure — **Done**
+2. ✅ Create basic menu bar item — **Done**
+3. ✅ Countdown display — **Done**
+4. ✅ Settings persistence — **Done**
+5. ✅ Life expectancy from bundled official-derived data (CDC LEWK4 + World Bank via `scripts/build_life_expectancy_bundle.py`) — **Done**
+6. **Next (product):** Phase 3 — “bonus” past expectancy, animations / polish; or Phase 5.1 — missing-country UX, version in About, distribution prep
+7. **Future:** Phase 4 — lifestyle factors
+8. **Future:** Code signing, notarization, and distribution (Phase 5.2+)

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-The app currently uses **hardcoded approximate values** in `LifeExpectancyCalculator.swift`. These are placeholder values and should be replaced with official data sources before production use.
+Bundled `DeathClock/Resources/life-expectancy-data.json` is produced by **`scripts/build_life_expectancy_bundle.py`** (see `scripts/README.md`). Schema v2 combines **CDC LEWK4** state period life tables with **World Bank** male/female life expectancy at birth for other countries. Regenerate the JSON when you want refreshed international figures (US state tables stay on the LEWK4 vintage until you swap the upstream files).
 
 ## Recommended Data Sources
 

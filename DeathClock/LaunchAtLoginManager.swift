@@ -60,7 +60,8 @@ class LaunchAtLoginManager {
                 }
             }
         } catch {
-            print("Failed to \(enabled ? "enable" : "disable") launch at login: \(error.localizedDescription)")
+            // "Operation not permitted" is common for Debug/ad hoc builds run from Xcode; SMAppService expects a properly signed app.
+            print("Launch at login (\(enabled ? "on" : "off")): \(error.localizedDescription)")
             return false
         }
     }

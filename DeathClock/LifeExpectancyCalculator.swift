@@ -2,20 +2,8 @@ import Foundation
 
 /// Calculates life expectancy and days remaining based on user demographics.
 ///
-/// **Data Source:**
-/// - Loads from Resources/life-expectancy-data.json
-/// - Falls back to hardcoded values if JSON loading fails
-/// - Values are approximate estimates based on WHO Global Health Observatory data
-///
-/// **Recommended Data Sources for Production:**
-/// - WHO Global Health Observatory: https://www.who.int/data/gho
-/// - CDC Life Tables (US): https://www.cdc.gov/nchs/products/life_tables.htm
-/// - World Bank: https://data.worldbank.org/indicator/SP.DYN.LE00.IN
-/// - UN Population Division: World Population Prospects
-///
-/// **Future Enhancements:**
-/// - Integrate API for real-time updates
-/// - Use actuarial life tables for age-adjusted calculations
+/// **Data:** Bundled `life-expectancy-data.json` (see `scripts/build_life_expectancy_bundle.py`).
+/// Schema v2 uses CDC LEWK4 state period life tables plus World Bank e₀ for other countries.
 class LifeExpectancyCalculator {
     static let shared = LifeExpectancyCalculator()
     
@@ -26,11 +14,7 @@ class LifeExpectancyCalculator {
     /// Calculate days remaining until life expectancy
     func calculateDaysRemaining(profile: UserProfile) -> Int? {
         // getLifeExpectancy returns remaining life expectancy at current age
-        guard let remainingLifeExpectancyYears = getLifeExpectancy(for: profile) else {
-            return nil
-        }
-        
-        // Convert remaining life expectancy from years to days
+        let remainingLifeExpectancyYears = getLifeExpectancy(for: profile)
         let remainingDays = Int(remainingLifeExpectancyYears * Constants.LifeExpectancy.daysPerYear)
         
         return max(0, remainingDays)
@@ -50,29 +34,23 @@ class LifeExpectancyCalculator {
         return Int(baseExpectancy * Constants.LifeExpectancy.daysPerYear)
     }
     
-    /// Get base life expectancy in years based on demographics
-    private func getLifeExpectancy(for profile: UserProfile) -> Double? {
-        let baseExpectancy = getBaseLifeExpectancy(profile: profile)
-        
-        // Adjust for current age (life expectancy increases as you age)
+    private func getLifeExpectancy(for profile: UserProfile) -> Double {
         let calendar = Calendar.current
-        let age = calendar.dateComponents([.year], from: profile.dateOfBirth, to: Date()).year ?? 0
-        
-        return adjustForAge(baseExpectancy, currentAge: age)
+        let ageYears = max(0, calendar.dateComponents([.year], from: profile.dateOfBirth, to: Date()).year ?? 0)
+        return dataLoader.remainingLifeExpectancyYears(
+            country: profile.location.country,
+            region: profile.location.region,
+            sex: profile.sex,
+            completedAgeYears: ageYears
+        )
     }
     
-    /// Get base life expectancy at birth (before age adjustment)
     private func getBaseLifeExpectancy(profile: UserProfile) -> Double {
-        switch profile.sex {
-        case .female:
-            return getFemaleLifeExpectancy(country: profile.location.country)
-        case .male:
-            return getMaleLifeExpectancy(country: profile.location.country)
-        case .other:
-            let male = getMaleLifeExpectancy(country: profile.location.country)
-            let female = getFemaleLifeExpectancy(country: profile.location.country)
-            return (male + female) / 2.0
-        }
+        dataLoader.lifeExpectancyAtBirth(
+            country: profile.location.country,
+            region: profile.location.region,
+            sex: profile.sex
+        )
     }
     
     func getMaleLifeExpectancy(country: String) -> Double {
@@ -81,34 +59,6 @@ class LifeExpectancyCalculator {
     
     func getFemaleLifeExpectancy(country: String) -> Double {
         return dataLoader.getFemaleLifeExpectancy(country: country)
-    }
-    
-    private func adjustForAge(_ baseExpectancy: Double, currentAge: Int) -> Double {
-        // Calculate remaining life expectancy at current age
-        // This is a simplified model - real actuarial tables are more complex
-        
-        if currentAge <= 0 {
-            return baseExpectancy
-        }
-        
-        // If age is already past base expectancy, use a conservative estimate
-        if Double(currentAge) >= baseExpectancy {
-            // For people who've exceeded base expectancy, estimate 5-10 more years
-            // This is a rough approximation - real actuarial data would be better
-            return max(5.0, 10.0 - (Double(currentAge) - baseExpectancy) * 0.1)
-        }
-        
-        // Simple model: remaining expectancy decreases more slowly than linearly
-        // As you survive longer, your remaining expectancy increases slightly
-        let yearsPast = Double(currentAge)
-        let remaining = baseExpectancy - yearsPast
-        
-        // Add bonus for surviving (simplified actuarial adjustment)
-        // Each decade survived adds a small bonus to remaining expectancy
-        let decadeBonus = Double(currentAge / 10) * 0.3
-        
-        // Ensure we always return a reasonable positive value
-        return max(remaining + decadeBonus, 1.0)
     }
     
     /// Format days remaining as a display string
