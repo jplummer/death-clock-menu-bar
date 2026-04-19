@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Bundled `DeathClock/Resources/life-expectancy-data.json` is produced by **`scripts/build_life_expectancy_bundle.py`** (see `scripts/README.md`). Schema v2 combines **CDC LEWK4** state period life tables with **World Bank** male/female life expectancy at birth for other countries. Regenerate the JSON when you want refreshed international figures (US state tables stay on the LEWK4 vintage until you swap the upstream files).
+Bundled `DeathClock/Resources/life-expectancy-data.json` is produced by **`scripts/build_life_expectancy_bundle.py`** (see `scripts/README.md`). By default, schema v2 uses **NCHS NVSR vol. 74 no. 12** (U.S. State Life Tables, **2022**) spreadsheets from CDC FTP plus **World Bank** male/female life expectancy at birth for other countries. Use **`--us-source lewk4`** to rebuild from legacy LEWK4 (1999–2001) instead. Regenerate when you want newer CDC vintages (new NVSR folders on FTP) or refreshed World Bank figures.
 
 ## Recommended Data Sources
 
@@ -46,7 +46,7 @@ Bundled `DeathClock/Resources/life-expectancy-data.json` is produced by **`scrip
 3. Load JSON file at app startup
 4. Update file periodically (manual or automated)
 
-**Pros**: Simple, fast, works offline  
+**Pros**: Fast, works offline after bundling  
 **Cons**: Requires manual updates, data can become stale
 
 ### Option 2: API Integration (Recommended for Production)
@@ -68,9 +68,8 @@ Bundled `DeathClock/Resources/life-expectancy-data.json` is produced by **`scrip
 
 ## Next Steps
 
-1. **Short Term**: Replace hardcoded values with data from JSON file
-2. **Medium Term**: Integrate World Bank API for automatic updates
-3. **Long Term**: Implement actuarial life tables for age-adjusted calculations
+1. **Current**: Regenerate JSON with `scripts/build_life_expectancy_bundle.py` (NVSR 2022 state tables + World Bank e₀ in the build script).
+2. **Later**: New NVSR FTP releases for updated US state tables; optional in-app refresh remains a product decision.
 
 ## Data Format Example
 

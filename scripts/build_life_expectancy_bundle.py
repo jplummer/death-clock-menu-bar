@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Build DeathClock/Resources/life-expectancy-data.json from:
-  - CDC LEWK4 state life table workbooks (male5 / female5 / total5 sheets)
+  - CDC US state period life tables (default: NVSR vol 74 no 12, 2022) or legacy LEWK4 (1999–2001)
   - World Bank male/female life expectancy at birth by country
 
 Run from repo root:  python3 scripts/build_life_expectancy_bundle.py
@@ -33,11 +33,18 @@ except ImportError:
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = REPO_ROOT / 'DeathClock' / 'Resources' / 'life-expectancy-data.json'
-CDC_INDEX = 'https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/60_09/'
-CDC_TABLE_PERIOD = '1999-2001'
+
+# LEWK4 (decennial 1999–2001)
+CDC_LEWK4_INDEX = 'https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/NVSR/60_09/'
+# NVSR 74-12: U.S. State Life Tables, 2022 — {ST}1=total, {ST}2=male, {ST}3=female, {ST}4=std errors
+CDC_NVSR_74_12_INDEX = 'https://ftp.cdc.gov/pub/health_statistics/nchs/Publications/NVSR/74-12/'
+
 WB_YEAR = 2022
 WB_MALE = f'https://api.worldbank.org/v2/country/all/indicator/SP.DYN.LE00.MA.IN?format=json&date={WB_YEAR}:{WB_YEAR}&per_page=20000'
 WB_FEMALE = f'https://api.worldbank.org/v2/country/all/indicator/SP.DYN.LE00.FE.IN?format=json&date={WB_YEAR}:{WB_YEAR}&per_page=20000'
+
+US_SOURCE_NVSR = 'nvsr74-12'
+US_SOURCE_LEWK4 = 'lewk4'
 
 # USPS code -> display name (for settings picker)
 US_STATE_NAMES: dict[str, str] = {
@@ -70,22 +77,12 @@ def http_get(url: str) -> bytes:
     return resp.read()
 
 
-def list_cdc_lewk4_xlsx() -> list[str]:
-  html = http_get(CDC_INDEX).decode('utf-8', errors='replace')
-  return sorted(set(re.findall(r'(lewk4_[a-z0-9_]+\.xlsx)', html, flags=re.I)))
-
-
-def slug_from_filename(name: str) -> str:
-  base = name.lower().replace('.xlsx', '')
-  if base.startswith('lewk4_'):
-    base = base[6:]
-  return base
-
-
 def parse_age_start(cell) -> int | None:
   if cell is None:
     return None
   s = str(cell).strip()
+  # NVSR uses Unicode en dash (U+2013) in "0–1"; LEWK4 may use ASCII hyphen.
+  s = s.replace('\u2013', '-').replace('\u2014', '-').replace('\u2212', '-')
   if re.match(r'^\d+\s*-\s*\d+', s):
     return int(s.split('-')[0].strip())
   if s.isdigit():
@@ -94,7 +91,7 @@ def parse_age_start(cell) -> int | None:
 
 
 def sheet_ex_series(ws, ex_col: int = 6) -> dict[int, float]:
-  """Map exact age x -> expectation of life e_x from a LEWK4 sheet."""
+  """Map exact age x -> expectation of life e_x from a life table sheet."""
   out: dict[int, float] = {}
   for row in ws.iter_rows(min_row=1, values_only=True):
     if not row:
@@ -126,6 +123,102 @@ def dense_curve(points: dict[int, float], max_age: int = 100) -> list[float]:
   return arr
 
 
+def average_curves(curves: list[list[float]]) -> list[float]:
+  if not curves:
+    raise ValueError('no curves')
+  n = min(len(c) for c in curves)
+  return [sum(c[i] for c in curves) / len(curves) for i in range(n)]
+
+
+# --- NVSR 74-12 (2022 state tables): one workbook per sex/total ---
+
+def parse_nvsr_workbook(path: Path) -> list[float]:
+  wb = load_workbook(path, data_only=True, read_only=True)
+  try:
+    ws = wb[wb.sheetnames[0]]
+    return dense_curve(sheet_ex_series(ws))
+  finally:
+    wb.close()
+
+
+def collect_nvsr_state_tables(cdc_dir: Path) -> dict[str, dict[str, list[float]]]:
+  """Group CA1.xlsx / CA2.xlsx / CA3.xlsx -> male/female/total curves."""
+  groups: dict[str, dict[int, Path]] = defaultdict(dict)
+  for path in cdc_dir.iterdir():
+    if not path.is_file():
+      continue
+    m = re.match(r'^([A-Za-z]{2})([1-4])\.xlsx$', path.name, flags=re.I)
+    if not m:
+      continue
+    code = m.group(1).upper()
+    num = int(m.group(2))
+    if num == 4:
+      continue
+    groups[code][num] = path
+
+  by_code: dict[str, dict[str, list[float]]] = {}
+  for code in sorted(groups.keys()):
+    if code not in US_STATE_NAMES:
+      print(f'  skip unknown jurisdiction {code}', file=sys.stderr)
+      continue
+    parts = groups[code]
+    if not all(i in parts for i in (1, 2, 3)):
+      print(f'  skip {code}: missing 1/2/3 workbooks (have {sorted(parts.keys())})', file=sys.stderr)
+      continue
+    by_code[code] = {
+      'total': parse_nvsr_workbook(parts[1]),
+      'male': parse_nvsr_workbook(parts[2]),
+      'female': parse_nvsr_workbook(parts[3]),
+    }
+  return by_code
+
+
+def list_cdc_nvsr_xlsx() -> list[str]:
+  html = http_get(CDC_NVSR_74_12_INDEX).decode('utf-8', errors='replace')
+  found = re.findall(r'/74-12/([A-Za-z]{2}[1-4]\.xlsx)', html, flags=re.I)
+  out: list[str] = []
+  seen: set[str] = set()
+  for f in found:
+    m = re.match(r'^([A-Za-z]{2})([1-4])(\.xlsx)$', f, flags=re.I)
+    if not m:
+      continue
+    norm = f'{m.group(1).upper()}{m.group(2)}{m.group(3).lower()}'
+    key = norm.upper()
+    if key in seen:
+      continue
+    seen.add(key)
+    out.append(norm)
+  return sorted(out)
+
+
+def download_cdc_nvsr(cache_dir: Path) -> None:
+  cache_dir.mkdir(parents=True, exist_ok=True)
+  names = [n for n in list_cdc_nvsr_xlsx() if not re.search(r'4\.xlsx$', n, flags=re.I)]
+  print(f'CDC NVSR 74-12: {len(names)} workbooks to fetch (skipping *4 standard errors)')
+  for name in names:
+    dest = cache_dir / name
+    if dest.exists() and dest.stat().st_size > 1000:
+      print(f'  cached {name}')
+      continue
+    url = CDC_NVSR_74_12_INDEX.rstrip('/') + '/' + name
+    print(f'  fetch {name}')
+    dest.write_bytes(http_get(url))
+
+
+# --- LEWK4 legacy ---
+
+def list_cdc_lewk4_xlsx() -> list[str]:
+  html = http_get(CDC_LEWK4_INDEX).decode('utf-8', errors='replace')
+  return sorted(set(re.findall(r'(lewk4_[a-z0-9_]+\.xlsx)', html, flags=re.I)))
+
+
+def slug_from_filename(name: str) -> str:
+  base = name.lower().replace('.xlsx', '')
+  if base.startswith('lewk4_'):
+    base = base[6:]
+  return base
+
+
 def life_table_sheet_triplet(wb) -> tuple[str, str, str]:
   """LEWK4 workbooks use total{n}/male{n}/female{n} with varying n per file."""
   pat = re.compile(r'^(male|female|total)(\d+)$', re.I)
@@ -143,7 +236,7 @@ def life_table_sheet_triplet(wb) -> tuple[str, str, str]:
   raise ValueError(f'No male/female/total sheet triplet in {wb.sheetnames}')
 
 
-def parse_state_workbook(path: Path) -> dict[str, list[float]]:
+def parse_lewk4_state_workbook(path: Path) -> dict[str, list[float]]:
   wb = load_workbook(path, data_only=True, read_only=True)
   try:
     sm, sf, st = life_table_sheet_triplet(wb)
@@ -155,11 +248,34 @@ def parse_state_workbook(path: Path) -> dict[str, list[float]]:
   return {'male': male, 'female': female, 'total': total}
 
 
-def average_curves(curves: list[list[float]]) -> list[float]:
-  if not curves:
-    raise ValueError('no curves')
-  n = min(len(c) for c in curves)
-  return [sum(c[i] for c in curves) / len(curves) for i in range(n)]
+def collect_lewk4_state_tables(cdc_dir: Path) -> dict[str, dict[str, list[float]]]:
+  files = sorted(cdc_dir.glob('lewk4_*.xlsx'))
+  if not files:
+    raise SystemExit(f'No lewk4_*.xlsx in {cdc_dir}. Run without --skip-cdc or check download.')
+
+  by_code: dict[str, dict[str, list[float]]] = {}
+  for path in files:
+    slug = slug_from_filename(path.name)
+    code = SLUG_TO_CODE.get(slug)
+    if not code:
+      print(f'  skip unknown file {path.name}', file=sys.stderr)
+      continue
+    by_code[code] = parse_lewk4_state_workbook(path)
+  return by_code
+
+
+def download_cdc_lewk4(cache_dir: Path) -> None:
+  cache_dir.mkdir(parents=True, exist_ok=True)
+  names = list_cdc_lewk4_xlsx()
+  print(f'CDC LEWK4: {len(names)} workbooks listed')
+  for name in names:
+    dest = cache_dir / name
+    if dest.exists() and dest.stat().st_size > 1000:
+      print(f'  cached {name}')
+      continue
+    url = CDC_LEWK4_INDEX.rstrip('/') + '/' + name
+    print(f'  fetch {name}')
+    dest.write_bytes(http_get(url))
 
 
 def fetch_world_bank_e0(base_url: str) -> dict[str, float]:
@@ -199,19 +315,30 @@ def fetch_world_bank_e0(base_url: str) -> dict[str, float]:
   return out
 
 
-def build_json(cdc_dir: Path) -> dict:
-  files = sorted(cdc_dir.glob('lewk4_*.xlsx'))
-  if not files:
-    raise SystemExit(f'No lewk4_*.xlsx in {cdc_dir}. Run without --skip-cdc or check download.')
-
-  by_code: dict[str, dict[str, list[float]]] = {}
-  for path in files:
-    slug = slug_from_filename(path.name)
-    code = SLUG_TO_CODE.get(slug)
-    if not code:
-      print(f'  skip unknown file {path.name}', file=sys.stderr)
-      continue
-    by_code[code] = parse_state_workbook(path)
+def build_bundle(cdc_dir: Path, us_source: str) -> dict:
+  if us_source == US_SOURCE_NVSR:
+    by_code = collect_nvsr_state_tables(cdc_dir)
+    period = '2022'
+    source_url = 'https://www.cdc.gov/nchs/products/nvsr.htm'
+    pdf_ref = 'https://www.cdc.gov/nchs/data/nvsr/nvsr74/nvsr74-12.pdf'
+    data_note = (
+      'State tables are NCHS U.S. State Life Tables, 2022 (NVSR vol. 74, no. 12), period life tables. '
+      'Spreadsheets: CDC FTP NVSR/74-12 ({ST}1=total, {ST}2=male, {ST}3=female). '
+      'International e₀ from World Bank; non-US remaining-life curves scale the US national average eₓ shape.'
+    )
+    ftp_note = CDC_NVSR_74_12_INDEX
+  elif us_source == US_SOURCE_LEWK4:
+    by_code = collect_lewk4_state_tables(cdc_dir)
+    period = '1999-2001'
+    source_url = 'https://www.cdc.gov/nchs/nvss/mortality/lewk4.htm'
+    pdf_ref = source_url
+    data_note = (
+      'State tables are NCHS LEWK4 decennial period life tables (1999–2001). '
+      'International e₀ from World Bank; US remaining-life uses these tables directly.'
+    )
+    ftp_note = CDC_LEWK4_INDEX
+  else:
+    raise ValueError(f'unknown us_source: {us_source}')
 
   if len(by_code) < 50:
     print(f'  warning: only {len(by_code)} state tables parsed', file=sys.stderr)
@@ -237,12 +364,12 @@ def build_json(cdc_dir: Path) -> dict:
   return {
     'schemaVersion': 2,
     'generatedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-    'cdcTablePeriod': CDC_TABLE_PERIOD,
-    'cdcSourceUrl': 'https://www.cdc.gov/nchs/nvss/mortality/lewk4.htm',
-    'cdcDataNote': (
-      'State tables are NCHS LEWK4 decennial period life tables (1999–2001). '
-      'They are older than World Bank e0; US remaining-life uses these tables directly.'
-    ),
+    'usTableSource': us_source,
+    'cdcTablePeriod': period,
+    'cdcSourceUrl': source_url,
+    'cdcReportPdfUrl': pdf_ref,
+    'cdcFtpSpreadsheetBaseUrl': ftp_note,
+    'cdcDataNote': data_note,
     'worldBankIndicatorYear': WB_YEAR,
     'worldBankSourceUrl': 'https://data.worldbank.org/',
     'usNationalAverage': {
@@ -256,36 +383,43 @@ def build_json(cdc_dir: Path) -> dict:
   }
 
 
-def download_cdc(cache_dir: Path) -> None:
-  cache_dir.mkdir(parents=True, exist_ok=True)
-  names = list_cdc_lewk4_xlsx()
-  print(f'CDC: {len(names)} workbooks listed')
-  for name in names:
-    dest = cache_dir / name
-    if dest.exists() and dest.stat().st_size > 1000:
-      print(f'  cached {name}')
-      continue
-    url = CDC_INDEX.rstrip('/') + '/' + name
-    print(f'  fetch {name}')
-    data = http_get(url)
-    dest.write_bytes(data)
+def default_cache_dir(us_source: str) -> Path:
+  if us_source == US_SOURCE_NVSR:
+    return REPO_ROOT / 'scripts' / 'cache' / 'cdc_nvsr_74_12'
+  return REPO_ROOT / 'scripts' / 'cache' / 'cdc_lewk4'
 
 
 def main() -> None:
   parser = argparse.ArgumentParser(description='Build life-expectancy-data.json')
   parser.add_argument('--output', type=Path, default=DEFAULT_OUT)
-  parser.add_argument('--cache-dir', type=Path, default=REPO_ROOT / 'scripts' / 'cache' / 'cdc_lewk4')
+  parser.add_argument(
+    '--us-source',
+    choices=(US_SOURCE_NVSR, US_SOURCE_LEWK4),
+    default=US_SOURCE_NVSR,
+    help=f'US state tables: {US_SOURCE_NVSR} (default, 2022) or {US_SOURCE_LEWK4} (1999–2001)',
+  )
+  parser.add_argument(
+    '--cache-dir',
+    type=Path,
+    default=None,
+    help='Override cache directory (default: scripts/cache/cdc_nvsr_74_12 or cdc_lewk4)',
+  )
   parser.add_argument('--skip-cdc', action='store_true', help='Use existing cache only; no CDC download')
   args = parser.parse_args()
 
+  cache_dir = args.cache_dir or default_cache_dir(args.us_source)
+
   if not args.skip_cdc:
-    download_cdc(args.cache_dir)
+    if args.us_source == US_SOURCE_NVSR:
+      download_cdc_nvsr(cache_dir)
+    else:
+      download_cdc_lewk4(cache_dir)
   else:
-    if not args.cache_dir.exists():
+    if not cache_dir.exists():
       print('--skip-cdc but cache dir missing', file=sys.stderr)
       sys.exit(1)
 
-  bundle = build_json(args.cache_dir)
+  bundle = build_bundle(cache_dir, args.us_source)
   args.output.parent.mkdir(parents=True, exist_ok=True)
   args.output.write_text(json.dumps(bundle, indent=2) + '\n', encoding='utf-8')
   print(f'Wrote {args.output} ({args.output.stat().st_size // 1024} KB)')

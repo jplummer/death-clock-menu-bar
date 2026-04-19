@@ -113,14 +113,14 @@ final class LifeExpectancyDataLoader {
   }
 
   func getMaleLifeExpectancy(country: String) -> Double {
-    if let v2 {
+    if v2 != nil {
       return lifeExpectancyAtBirth(country: country, region: nil, sex: .male)
     }
     return legacyMale[country] ?? defaultMale
   }
 
   func getFemaleLifeExpectancy(country: String) -> Double {
-    if let v2 {
+    if v2 != nil {
       return lifeExpectancyAtBirth(country: country, region: nil, sex: .female)
     }
     return legacyFemale[country] ?? defaultFemale
