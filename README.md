@@ -81,9 +81,8 @@ See [PLAN.md](PLAN.md) for detailed development phases and architecture.
 
 ## Contributing
 
-This is a personal project, but suggestions and improvements are welcome! Totally vibe oded with Cursor. I asked questions and gave instructions, read code but didn't write or edit any.
+This is a personal project, but suggestions and improvements are welcome! Totally vibe coded with Cursor. I asked questions and gave instructions, read code but didn't write or edit any.
 
 ## License
 
-MIT License - feel free to use and modify as needed.
-
+[PolyForm Noncommercial License 1.0.0](https://github.com/jplummer/death-clock-menu-bar/blob/main/LICENSE)
