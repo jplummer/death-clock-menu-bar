@@ -43,9 +43,8 @@ class DisplayFormatter {
             // Countdown: days remaining
             text = calculator.formatDaysRemaining(daysRemaining, format: format)
         case .mementoVivere:
-            // Count-up: days lived
-            let daysLived = calculator.calculateDaysLived(profile: profile)
-            text = calculator.formatDaysLived(daysLived, format: format)
+            // Count-up: days lived (years/days uses calendar birthdays, not days/365)
+            text = calculator.formatDaysLived(profile: profile, format: format)
         }
         return .text(text)
     }
@@ -61,9 +60,7 @@ class DisplayFormatter {
             // Percentage remaining
             text = calculator.formatDaysRemaining(daysRemaining, format: .percentage, totalDays: totalDays)
         case .mementoVivere:
-            // Percentage lived
-            let daysLived = calculator.calculateDaysLived(profile: profile)
-            text = calculator.formatDaysLived(daysLived, format: .percentage, totalDays: totalDays)
+            text = calculator.formatDaysLived(profile: profile, format: .percentage, totalDays: totalDays)
         }
         return .text(text)
     }
@@ -95,8 +92,7 @@ class DisplayFormatter {
             case .mementoMori:
                 return calculator.formatDaysRemaining(daysRemaining, format: format)
             case .mementoVivere:
-                let daysLived = calculator.calculateDaysLived(profile: profile)
-                return calculator.formatDaysLived(daysLived, format: format)
+                return calculator.formatDaysLived(profile: profile, format: format)
             }
         case .percentage:
             if let totalDays = calculator.calculateTotalDaysFromBirth(profile: profile) {
@@ -104,8 +100,7 @@ class DisplayFormatter {
                 case .mementoMori:
                     return calculator.formatDaysRemaining(daysRemaining, format: format, totalDays: totalDays)
                 case .mementoVivere:
-                    let daysLived = calculator.calculateDaysLived(profile: profile)
-                    return calculator.formatDaysLived(daysLived, format: format, totalDays: totalDays)
+                    return calculator.formatDaysLived(profile: profile, format: format, totalDays: totalDays)
                 }
             }
             return format.rawValue

@@ -78,10 +78,10 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    HStack {
-                        Text("Region:")
-                            .frame(width: 100, alignment: .leading)
-                        if viewModel.selectedCountry == "United States", !viewModel.usStatePickerOptions.isEmpty {
+                    if viewModel.showRegionField {
+                        HStack {
+                            Text("State:")
+                                .frame(width: 100, alignment: .leading)
                             Picker("", selection: $viewModel.region) {
                                 Text("National average").tag("")
                                 ForEach(viewModel.usStatePickerOptions, id: \.code) { item in
@@ -90,11 +90,10 @@ struct SettingsView: View {
                             }
                             .pickerStyle(.menu)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            TextField("Optional", text: $viewModel.region)
                         }
                     }
                 }
+                .id(viewModel.selectedCountry)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
@@ -186,15 +185,14 @@ struct SettingsView: View {
         }
         .onChange(of: viewModel.selectedCountry) {
             Task { @MainActor in
-                if viewModel.selectedCountry != "United States" {
-                    viewModel.region = ""
-                }
+                viewModel.clearRegionIfNotApplicable()
                 viewModel.updatePreview()
                 viewModel.debouncedSave()
             }
         }
         .onChange(of: viewModel.region) {
             Task { @MainActor in
+                viewModel.updatePreview()
                 viewModel.debouncedSave()
             }
         }

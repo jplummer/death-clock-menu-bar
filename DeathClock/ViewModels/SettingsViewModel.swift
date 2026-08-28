@@ -30,6 +30,11 @@ class SettingsViewModel: ObservableObject {
         LifeExpectancyDataLoader.shared.usStatePickerOptions
     }
     
+    /// Region is only shown when the bundle exposes selectable regions for the selected country.
+    var showRegionField: Bool {
+        LifeExpectancyDataLoader.shared.hasSelectableRegions(forCountry: selectedCountry)
+    }
+    
     var currentProfile: UserProfile {
         UserProfile(
             dateOfBirth: dateOfBirth,
@@ -50,6 +55,9 @@ class SettingsViewModel: ObservableObject {
             selectedCountry = profile.location.country
             region = profile.location.region ?? ""
         }
+        if clearRegionIfNotApplicable() {
+            debouncedSave()
+        }
         displayFormat = settings.displayFormat
         mementoMode = settings.mementoMode
         showIcon = settings.showIcon
@@ -64,6 +72,15 @@ class SettingsViewModel: ObservableObject {
     
     func updatePreview() {
         previewDays = calculator.calculateDaysRemaining(profile: currentProfile)
+    }
+    
+    /// Clears `region` when the selected country has no region picker. Returns whether anything changed.
+    @discardableResult
+    func clearRegionIfNotApplicable() -> Bool {
+        guard !LifeExpectancyDataLoader.shared.hasSelectableRegions(forCountry: selectedCountry) else { return false }
+        guard !region.isEmpty else { return false }
+        region = ""
+        return true
     }
     
     /// Normalize date to nearest valid year if invalid
@@ -134,16 +151,25 @@ class SettingsViewModel: ObservableObject {
     }
     
     private func saveSettings() {
-        let loginOk = launchAtLoginManager.setEnabled(startAtLogin)
-        if !loginOk {
-            startAtLogin = launchAtLoginManager.isEnabled
-        }
+        let previousStartAtLogin = settingsManager.settings.startAtLogin
         
         settingsManager.settings.userProfile = currentProfile
         settingsManager.settings.displayFormat = displayFormat
         settingsManager.settings.mementoMode = mementoMode
         settingsManager.settings.showIcon = showIcon
         settingsManager.settings.startAtLogin = startAtLogin
+        
+        // Avoid calling SMAppService on every debounced save (repeated unregister causes duplicate errors / log noise).
+        guard startAtLogin != previousStartAtLogin else {
+            MenuBarController.shared.updateDisplay()
+            return
+        }
+        
+        let loginOk = launchAtLoginManager.setEnabled(startAtLogin)
+        if !loginOk {
+            startAtLogin = launchAtLoginManager.isEnabled
+            settingsManager.settings.startAtLogin = startAtLogin
+        }
         
         MenuBarController.shared.updateDisplay()
     }
